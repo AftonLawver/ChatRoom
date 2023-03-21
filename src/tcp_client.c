@@ -19,21 +19,14 @@ void func(int sockfd)
     char buff[SIZE];
     int n;
     for (;;) {
-        // clear contents of buffer
         bzero(buff, sizeof(buff));
-        // tell user on client side to enter command.
         printf("Enter the command: ");
         n = 0;
-        // store the command in the buff variable
         while ((buff[n++] = getchar()) != '\n')
             ;
-        // send the command (inside the buffer) to the server side through the socket.
         write(sockfd, buff, sizeof(buff));
-        // clear out the memory in buffer
         bzero(buff, sizeof(buff));
-        // read the output of the server into the buffer object
         read(sockfd, buff, sizeof(buff));
-        // print what is in the buffer to the terminal
         if ((strncmp(buff, "", 4)) == 0) {
             printf("Client Exit...\n");
             break;
@@ -43,7 +36,7 @@ void func(int sockfd)
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
+    if (argc != 2) {
         fprintf(stderr, "ERROR: no IP address provided\n");
         exit(1);
     }
@@ -54,7 +47,6 @@ int main(int argc, char *argv[]) {
         perror("socket creation failed...\n");
         exit(0);
     }
-    // specify an address for the socket
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(PORT);
@@ -66,12 +58,9 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
     else
-        printf("connected to the server..\n");
+        printf("Connected to the server..\n");
 
-    // receive data from the server
     func(network_socket);
-
-    // close the socket
     close(network_socket);
     return 0;
 }
