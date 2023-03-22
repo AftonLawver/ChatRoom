@@ -19,9 +19,18 @@ void func(int sockfd)
     char buff[SIZE];
     int n;
     for (;;) {
+//        if (read(sockfd) == 0) {
+//            printf("Server is down...");
+//            break;
+//        }
+
         bzero(buff, sizeof(buff));
         printf("Enter the command: ");
         n = 0;
+        if (read(sockfd, buff, ) == 0) {
+            printf("Server is down...");
+            break;
+        }
         while ((buff[n++] = getchar()) != '\n')
             ;
         write(sockfd, buff, sizeof(buff));
@@ -31,6 +40,7 @@ void func(int sockfd)
             printf("Client Exit...\n");
             break;
         }
+
         printf("From Server: %s", buff);
     }
 }
