@@ -6,24 +6,19 @@
 #include <sys/socket.h>
 #include <strings.h>
 #include <string.h>
-
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
-#include <pthread.h>
 
-#define NUM_CLIENTS 5
+
 #define SIZE 1024
 #define PORT 12587
 
-void *connection_handler(void *socket_desc) {
-    int connfd = *(int *)socket_desc;
+void func(int connfd)
+{
     char buff[SIZE];
-    int n;
     for (;;) {
         FILE *pipe;
-        int len;
         bzero(buff, SIZE);
         read(connfd, buff, sizeof(buff));
         printf("From client: %s", buff);
@@ -57,7 +52,6 @@ void *connection_handler(void *socket_desc) {
 
 int main() {
     int pid;
-    pthread_t thread_id;
     int new_socket;
     struct sockaddr_in server_address;
     struct sockaddr_in newAddr;
@@ -81,29 +75,33 @@ int main() {
     }
 
     int server_listening = listen(server_socket, 5);
-    if (server_listening != 0) {
+    if (server_listening != 0 ) {
         perror("Server listening failed..\n");
         exit(0);
     }
 
     printf("Server listening on port %d\n", PORT);
-    while (1) {
-        new_socket = accept(server_socket, (struct sockaddr *) &newAddr, &addr_size);
+    while(1) {
+        new_socket = accept(server_socket, (struct sockaddr*)&newAddr, &addr_size);
         if (new_socket < 0) {
             perror("Error on accept\n");
             exit(1);
         }
-
-
-        if (pthread_create(&thread_id, NULL, connection_handler, (void *) &new_socket) < 0) {
-            perror("Error creating thread\n");
+        pid = fork();
+        if (pid < 0) {
+            perror("Error on fork");
             exit(1);
         }
-        else {
-            printf("Thread id: %ld\n", thread_id);
+        if (pid == 0) {
             printf("Accepted request from IP: %s\n", inet_ntoa(newAddr.sin_addr));
+            close(server_socket);
+            func(new_socket);
+            break;
         }
-
+        else {
+            close(new_socket);
+        }
     }
-
+    close(new_socket);
+    exit(0);
 }
