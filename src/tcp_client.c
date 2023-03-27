@@ -3,40 +3,40 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <strings.h>
-#include <string.h>
-
 #include <netinet/in.h>
 #include <unistd.h>
 #define SIZE 1024
 #define PORT 12587
 
-void func(int sockfd)
-{
-    char buff[SIZE];
+void connection_handler(int sockfd) {
+    char buffer[SIZE];
     int n;
-    for (;;) {
-        bzero(buff, sizeof(buff));
-        printf("Enter the command: ");
-        n = 0;
-//        if (write(sockfd, buff, sizeof(sockfd)) == 0) {
-//            printf("Client Exit...\n");
-//            break;
-//        }
-        while ((buff[n++] = getchar()) != '\n')
+    int recv_value = recv(sockfd, buffer, SIZE,0);
+    if (recv_value == 0) {
+        printf("Client Exit...\n");
+        exit(0);
+    }
+    printf("%s", buffer);
+
+    while (1) {
+        bzero(buffer, sizeof(buffer));
+        n=0;
+        while ((buffer[n++] = getchar()) != '\n')
             ;
-        write(sockfd, buff, sizeof(buff));
-        bzero(buff, sizeof(buff));
-        int read_value = read(sockfd, buff, sizeof(buff));
-        if (read_value == 0) {
+        send(sockfd, buffer, SIZE, 0);
+        bzero(buffer, sizeof(buffer));
+        n = 0;
+        int recv_value = recv(sockfd, buffer, sizeof(buffer),0);
+        while ((buffer[n++] = getchar()) != '\n')
+            ;
+        printf("%s", buffer);
+        if (recv_value == 0) {
             printf("Client Exit...\n");
             break;
         }
-
-        printf("From Server: %s", buff);
     }
 }
 
@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     char *ip_address = argv[1];
-    // create a socket
     int network_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (network_socket == -1) {
         perror("socket creation failed...\n");
@@ -62,10 +61,11 @@ int main(int argc, char *argv[]) {
         perror("connection with the server failed...\n");
         exit(0);
     }
-    else
+    else {
         printf("Connected to the server..\n");
+        connection_handler(network_socket);
+        close(network_socket);
+        return 0;
+    }
 
-    func(network_socket);
-    close(network_socket);
-    return 0;
 }

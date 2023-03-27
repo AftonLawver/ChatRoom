@@ -5,54 +5,43 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <strings.h>
-#include <string.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 
 #define SIZE 1024
 #define PORT 12587
 
-void func(int connfd)
-{
-    char buff[SIZE];
-    for (;;) {
-        FILE *pipe;
-        bzero(buff, SIZE);
-        read(connfd, buff, sizeof(buff));
-        printf("From client: %s", buff);
+void *connection_handler(void *p_client_socket) {
+    int n, client_socket;
+    client_socket = *((int*)p_client_socket);
+    free(p_client_socket);
 
-        if (system(buff) != 0) {
-            write(connfd, "system command does not exist\n", sizeof(buff));
+    char buffer[SIZE];
+
+    while(1){
+        bzero(buffer, SIZE);
+        char *msg = "Server: Enter your name:\n";
+        send(client_socket, msg, SIZE,0);
+        int recv_value = recv(client_socket, buffer, SIZE, 0);
+        if (recv_value == 0) {
+            printf("Server Exit...\n");
+            exit(0);
         }
-        else {
-            if (strncmp("exit", buff, 4) == 0) {
-                printf("Server Exit...\n");
-                return;
-            }
-            pipe = popen(buff, "r");
-            bzero(buff, SIZE);
-            if (pipe == NULL) {
-                write(connfd, "Something went wrong with running the command.", sizeof(buff));
-            }
-            else {
-                int i = 0;
-                int c = 0;
-                while((c=getc(pipe))!=EOF) {
-                    buff[i++]=c;
-                    buff[i]='\0';
-                }
-                write(connfd, buff, sizeof(buff));
-                pclose(pipe);
-            }
+
+        char *msg2 = " named ";
+        printf("%s %s", msg2, buffer);
+        if (recv_value == 0) {
+            printf("Server Exit...\n");
+            break;
         }
     }
 }
 
 int main() {
-    int pid;
-    int new_socket;
+    int client_socket;
     struct sockaddr_in server_address;
     struct sockaddr_in newAddr;
     socklen_t addr_size;
@@ -70,6 +59,7 @@ int main() {
 
     int bind_socket = bind(server_socket, (struct sockaddr *) &server_address, sizeof(server_address));
     if (bind_socket != 0) {
+        close(server_socket);
         perror("socket bind failed...\n");
         exit(0);
     }
@@ -79,29 +69,27 @@ int main() {
         perror("Server listening failed..\n");
         exit(0);
     }
-
     printf("Server listening on port %d\n", PORT);
     while(1) {
-        new_socket = accept(server_socket, (struct sockaddr*)&newAddr, &addr_size);
-        if (new_socket < 0) {
+        int thread_number;
+        client_socket = accept(server_socket, (struct sockaddr*)&newAddr, &addr_size);
+        if (client_socket < 0) {
             perror("Error on accept\n");
             exit(1);
         }
-        pid = fork();
-        if (pid < 0) {
-            perror("Error on fork");
-            exit(1);
-        }
-        if (pid == 0) {
+        pthread_t t;
+        int *pclient = malloc(sizeof(int));
+        *pclient = client_socket;
+        thread_number = pthread_create(&t, NULL, connection_handler, pclient);
+        if(thread_number == 0) {
             printf("Accepted request from IP: %s\n", inet_ntoa(newAddr.sin_addr));
-            close(server_socket);
-            func(new_socket);
-            break;
         }
         else {
-            close(new_socket);
+            printf("ERROR return code from the pthread_create() is %d\n", thread_number);
+            break;
         }
     }
-    close(new_socket);
-    exit(0);
+    close(client_socket);
+    printf("closing connection\n");
 }
+
