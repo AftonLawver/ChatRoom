@@ -126,7 +126,7 @@ void *handle_client(void *arg) {
             if (strlen(buffer) > 0) {
                 send_message(buffer, cli->uid);
                 str_trim_lf(buffer, strlen(buffer));
-                printf("%s -> %s\n", buffer, cli->name);
+                printf("%s\n", buffer);
             }
         }
         else if (receive == 0 || strcmp(buffer, "exit") == 0) {
